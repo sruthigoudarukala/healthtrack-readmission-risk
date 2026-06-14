@@ -1,0 +1,294 @@
+{
+  "name": "My workflow 4",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "aa7e6b1a-367d-45a4-afc0-d7a80b0fdfb9",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1HkZ4_1vC5oSTO0oIOOnIv-PsjUDUCm7NtO7P156V78E",
+          "mode": "list",
+          "cachedResultName": "healthtrack_alerts_today",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HkZ4_1vC5oSTO0oIOOnIv-PsjUDUCm7NtO7P156V78E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1124087336,
+          "mode": "list",
+          "cachedResultName": "healthtrack_alerts_today",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HkZ4_1vC5oSTO0oIOOnIv-PsjUDUCm7NtO7P156V78E/edit#gid=1124087336"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "09468f0c-98f8-4485-85ac-dd25aa92f79e",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "felzV1guEEY3Aa5E",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst items = $input.all();\n\nreturn [{ json: { \n  urgent_count: 0, \n  urgent_list: \"⚠️ Patient P0030 — General Medicine — Patient P0030 is at high risk for readmission\\n⚠️ Patient P0071 — Cardiology — Patient P0071 is at high risk for readmission\"\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "3ab7703c-bb4d-4596-b786-cedf8bf34dc1",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "407659d8-8c04-4686-aab1-932b9ff398af",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "OK",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "4de153e3-d69d-429d-a401-b8c41f173a55",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BABB51QBY",
+          "mode": "list",
+          "cachedResultName": "care-coordination"
+        },
+        "text": "=🏥 HealthTrack Daily Risk Report\nStatus: OK\nTotal Patients Flagged: 87\n\nPlease review healthtrack_alerts_today.csv for urgent interventions.",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "17d4cc82-8df6-4202-b6e8-eebfcaf2a754",
+      "name": "Send a message",
+      "webhookId": "8197841c-f59c-4e84-a031-c363b9e00692",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "BmmwJexcDgi6xQmF",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BABB563K8",
+          "mode": "list",
+          "cachedResultName": "data-ops"
+        },
+        "text": "⚠️ HealthTrack Daily Pipeline BLOCKED Data quality issues detected.  Please review the dataset before processing.",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        832,
+        96
+      ],
+      "id": "e702743c-7665-4eb9-805d-80d51f5115d3",
+      "name": "Send a message1",
+      "webhookId": "6fca2e25-fbfc-434d-b1dc-4f2f1cbce05c",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "BmmwJexcDgi6xQmF",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst items = $input.all();\nconst urgent = items.filter(i => i.json.alert_priority === \"URGENT\");\n\nconst messages = urgent.map(i => \n  `⚠️ Patient ${i.json.patient_id} — ${i.json.department} — ${i.json.intervention_note.substring(0, 100)}`\n);\n\nreturn [{ json: { urgent_count: urgent.length, urgent_list: messages.join(\"\\n\") } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "56cfc009-03dc-4fec-aef8-9428699d8b8d",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BABB51QBY",
+          "mode": "list",
+          "cachedResultName": "care-coordination"
+        },
+        "text": "=🚨 URGENT Patients Requiring Immediate Intervention:  {{ $json.urgent_list }}  Total URGENT: {{ $json.urgent_count }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1248,
+        -96
+      ],
+      "id": "e276c8e8-21cc-4372-8b28-2ec4b1d3bb1b",
+      "name": "Send a message2",
+      "webhookId": "923a2754-b3a8-42cb-8498-38262d3d266e",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "BmmwJexcDgi6xQmF",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "bde2a2c0-ae60-40e6-8648-6dda57721795",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e3257c8aa018a5053aa73d623f67c89b299c02927f312e2023e6b0b91aa79ef6"
+  },
+  "nodeGroups": [],
+  "id": "lbjwecMmR6s8vF2w",
+  "tags": []
+}
